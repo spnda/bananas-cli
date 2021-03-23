@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import '../github/token.dart';
 import 'bananas_url.dart';
 import 'license.dart';
 import 'new_package_info.dart';
@@ -13,7 +14,7 @@ import '../bananas/content_type.dart';
 import 'package_exception.dart';
 
 class BaNaNaS {
-  String accessToken = '';
+  Token accessToken = Token(accessToken: '', tokenType: 'Bearer');
 
   static BaNaNaS bananas = BaNaNaS();
 
@@ -23,7 +24,7 @@ class BaNaNaS {
   Future<List<Package>> getMyPackages() async {
     var url = Uri.https(apiBase, '/package/self');
     var contents = (await http.get(url, headers: {
-      HttpHeaders.authorizationHeader: 'Bearer $accessToken',
+      HttpHeaders.authorizationHeader: accessToken.asHeader(),
     })).body;
     final data = json.decode(contents.toString());
     if (data is Map && data['message'] != null) {
@@ -71,7 +72,7 @@ class BaNaNaS {
   Future<String> newPackage() async {
     var url = Uri.https(apiBase, '/new-package');
     var response = (await http.post(url, headers: {
-      HttpHeaders.authorizationHeader: 'Bearer $accessToken',
+      HttpHeaders.authorizationHeader: accessToken.asHeader(),
     }));
     if (response.statusCode != 200) throw Exception(response.body);
     final data = json.decode(response.body) as Map<String, dynamic>;
@@ -85,7 +86,7 @@ class BaNaNaS {
   Future<NewPackageInfo> getNewPackageInfo(String uploadToken) async {
     var url = Uri.https(apiBase, '/new-package/$uploadToken');
     var contents = (await http.get(url, headers: {
-      HttpHeaders.authorizationHeader: 'Bearer $accessToken',
+      HttpHeaders.authorizationHeader: accessToken.asHeader(),
     })).body;
     final data = json.decode(contents.toString()) as Map<String, dynamic>;
     if (data['message'] != null) {
@@ -98,7 +99,7 @@ class BaNaNaS {
   Future<bool> updatePackageInfo(String uploadToken, NewPackageInfo packageInfo) async {
     var url = Uri.https(apiBase, '/new-package/$uploadToken');
     var response = await http.put(url, headers: {
-      HttpHeaders.authorizationHeader: 'Bearer $accessToken',
+      HttpHeaders.authorizationHeader: accessToken.asHeader(),
     }, body: json.encode(packageInfo.toJson()));
     if (response.statusCode == 204) return true;
     var jsonResponse = json.decode(response.body);
@@ -112,7 +113,7 @@ class BaNaNaS {
   Future<NewPackageInfo> publishNewPackage(String uploadToken) async {
     var url = Uri.https(apiBase, '/new-package/$uploadToken/publish');
     var response = await http.post(url, headers: {
-      HttpHeaders.authorizationHeader: 'Bearer $accessToken',
+      HttpHeaders.authorizationHeader: accessToken.asHeader(),
     });
     if (response.statusCode != 201) {
       final responseJson = json.decode(response.body);

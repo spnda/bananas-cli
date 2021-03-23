@@ -18,7 +18,7 @@ class LoginCommand extends Command {
     var auth = GitHubAuth('ape');
     final token = await auth.readFromFile();
     if (token != null) {
-      final valid = await auth.validate(token.accessToken);
+      final valid = await auth.validate(token);
       if (valid) {
         /// The saved credentials are valid, ask the user if we really want to 
         /// get new credentials.

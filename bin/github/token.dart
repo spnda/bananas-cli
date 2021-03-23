@@ -15,4 +15,8 @@ class Token {
     data['token_type'] = tokenType;
     return data;
   }
+
+  String asHeader() {
+    return '$tokenType $accessToken';
+  }
 }

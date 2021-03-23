@@ -49,7 +49,7 @@ class GitHubAuth {
       if (token == null) {
         throw Exception('No auth token could be read.');
       } else {
-        if (!(await validate(token.accessToken))) {
+        if (!(await validate(token))) {
           throw Exception('Invalid auth token.');
         }
         return token;
@@ -60,10 +60,10 @@ class GitHubAuth {
     }
   }
 
-  Future<bool> validate(String token) async {
+  Future<bool> validate(Token token) async {
     final uri = Uri.https(apiBase, 'user');
     final request = await http.get(uri, headers: {
-      HttpHeaders.authorizationHeader: 'Bearer $token',
+      HttpHeaders.authorizationHeader: token.asHeader(),
     });
     return request.statusCode == 200;
   }
@@ -73,7 +73,7 @@ class GitHubAuth {
       final data = _file.readAsStringSync();
       if (data.isEmpty) return null;
       final token = Token(accessToken: data, tokenType: 'Bearer');
-      BaNaNaS.bananas.accessToken = token.accessToken;
+      BaNaNaS.bananas.accessToken = token;
       return token;
     } else {
       return null;
@@ -136,7 +136,7 @@ class GitHubAuth {
       throw Exception('Couldn\'t get access token.');
     }
     final token = Token.fromJson(json.decode(accessData.body));
-    BaNaNaS.bananas.accessToken = token.accessToken;
+    BaNaNaS.bananas.accessToken = token;
     await writeToFile(token);
     return token;
   }
