@@ -16,7 +16,7 @@ import '../utilities/md5sum.dart';
 
 class ManageCommand extends Command {
   @override
-  String get description => throw UnimplementedError();
+  String get description => 'Command to manage packages.';
 
   @override
   String get name => 'manage';

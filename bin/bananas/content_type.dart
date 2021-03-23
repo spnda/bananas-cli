@@ -1,5 +1,6 @@
 /// The various content types for uploading.
 enum BananasContentType {
+  invalid,
   ai,
   ai_library,
   base_graphics,
@@ -39,6 +40,7 @@ extension BananasContentTypeExt on BananasContentType {
         return 'NewGRF';
       case BananasContentType.scenario:
         return 'Scenario';
+      case BananasContentType.invalid:
       default:
         return '';
     }

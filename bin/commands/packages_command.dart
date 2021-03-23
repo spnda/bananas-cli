@@ -15,13 +15,6 @@ class PackagesCommand extends Command {
   @override
   String get name => 'packages';
 
-  PackagesCommand() {
-    argParser.addCommand('list');
-    argParser.addCommand('search');
-    argParser.addCommand('info');
-    argParser.addCommand('self');
-  }
-
   List<Package>? _cached_packages;
 
   Future<List<Package>> getPackages({BananasContentType contentType = BananasContentType.newgrf}) async {
@@ -34,40 +27,79 @@ class PackagesCommand extends Command {
 
   @override
   void run() async {
-    if (argResults!.command == null) {
-      print(argParser.usage);
+    if (argResults == null) return;
+    final arguments = List.from(argResults!.rest);
+
+    if (arguments.isEmpty) {
+      /// TODO: Improve error message.
+      print('No arguments passed.');
       return;
     }
-    final contentType = BananasContentType.newgrf; // Default content type.
-    switch (argResults!.command!.name) {
-      case 'list':
-        final packages = await getPackages(contentType: contentType);
-        var countToShow = min(20, packages.length);
-        _printPackages(packages.sublist(0, countToShow), 'Showing $countToShow of ${packages.length} ${contentType.getHumanReadable()}s available');
-        break;
-      case 'search':
-        final query = argResults!.arguments.last;
-        final packages = (await getPackages(contentType: contentType)).where((package) {
-          return package.name.toLowerCase().contains(query.toLowerCase());
-        }).toList();
-        _printPackages(packages, 'Found ${packages.length} ${contentType.getHumanReadable()}s matching your search');
-        break;
-      case 'info':
-        final query = argResults!.arguments.last;
-        try {
-          final package = await BaNaNaS.bananas.getPackage(contentType, query);
-          print(package.asInfoString());
-        } on Error catch (e) {
-          print(e);
-        }
-        break;
-      case 'self':
-        await GitHubAuth('ape').init();
-        final packages = await BaNaNaS.bananas.getMyPackages();
-        _printPackages(packages, 'Showing your ${packages.length} packages.');
-        break;
-      default:
-        throw Error();
+
+    /// Get the bananas content-type from the first argument.
+    var contentType = BananasContentType.newgrf; // Default content-type.
+    try {
+      contentType = BananasContentTypeExt.fromString(arguments[0]);
+    } on Error {
+      contentType = BananasContentType.invalid;
+    }
+
+    if (arguments.length == 1 && arguments.isNotEmpty && contentType == BananasContentType.invalid) {
+      /// All the commands requiring no content type to function.
+      switch(arguments[0]) {
+        case 'self':
+          await GitHubAuth('ape').init();
+          final packages = await BaNaNaS.bananas.getMyPackages();
+          _printPackages(packages, 'Showing your ${packages.length} packages.');
+          break;
+        default:
+          print('${arguments[0]} is not a command. See \'bananas help packages\'.');
+      }
+    } else {
+      if (arguments.length == 1) {
+        /// If no content-type was passed, we'll just run the list command.
+        arguments.add('list');
+      }
+
+      /// All the commands requiring a content type to function.
+      switch (arguments[1]) {
+        case 'list':
+          var pageIndex = arguments.length >= 3 ? int.tryParse(arguments[2]) : 0;
+          pageIndex ??= 0;
+          final packages = await getPackages(contentType: contentType);
+          var countToShow = min(20, packages.length);
+          final offset = pageIndex * countToShow;
+          if (offset + countToShow > packages.length) break;
+          _printPackages(packages.sublist(pageIndex == 1 ? 0 : offset, offset + countToShow), 'Showing $countToShow of ${packages.length} ${contentType.getHumanReadable()}s available');
+          break;
+        case 'info':
+          final query = argResults!.arguments.last;
+          try {
+            final package = await BaNaNaS.bananas.getPackage(contentType, query);
+            print(package.asInfoString());
+          } on Error catch (e) {
+            print(e);
+          }
+          break;
+        default:
+          final query = arguments[1];
+          /// If the last argument is a 8 digit long hexadecimal integer, we'll
+          /// interpret it as a content ID and will search using that instead.
+          List<Package> packages;
+          if (query.length == 8 && int.tryParse(query, radix: 16) != null) {
+            packages = [await BaNaNaS.bananas.getPackage(contentType, query)];
+          } else {
+            packages = (await getPackages(contentType: contentType)).where((package) {
+              return package.name.toLowerCase().contains(query.toLowerCase());
+            }).toList();
+          }
+          if (packages.length == 1) {
+            print(packages.first.asInfoString());
+          } else {
+            _printPackages(packages, 'Found ${packages.length} ${contentType.getHumanReadable()}s matching your search');
+          }
+          break;
+      }
     }
   }
 
