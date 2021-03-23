@@ -56,8 +56,9 @@ class BaNaNaS {
   /// Get a package by ID.
   Future<Package> getPackage(BananasContentType contentType, String uuid) async {
     var url = Uri.https(apiBase, '/package/${contentType.get()}/$uuid');
-    var contents = (await http.get(url)).body;
-    final data = json.decode(contents.toString()) as Map<String, dynamic>;
+    var response = await http.get(url);
+    if (response.statusCode != 200) throw Exception('Could not find package for $uuid');
+    final data = json.decode(response.body) as Map<String, dynamic>;
     if (data['message'] != null) {
       throw ArgumentError(data['message']);
     }

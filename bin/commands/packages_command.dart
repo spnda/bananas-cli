@@ -38,29 +38,27 @@ class PackagesCommand extends Command {
       print(argParser.usage);
       return;
     }
+    final contentType = BananasContentType.newgrf; // Default content type.
     switch (argResults!.command!.name) {
       case 'list':
-        final packages = await getPackages();
+        final packages = await getPackages(contentType: contentType);
         var countToShow = min(20, packages.length);
-        _printPackages(packages.sublist(0, countToShow), 'Showing $countToShow of ${packages.length} NewGRFs available');
+        _printPackages(packages.sublist(0, countToShow), 'Showing $countToShow of ${packages.length} ${contentType.getHumanReadable()}s available');
         break;
       case 'search':
         final query = argResults!.arguments.last;
-        final packages = (await getPackages()).where((package) {
+        final packages = (await getPackages(contentType: contentType)).where((package) {
           return package.name.toLowerCase().contains(query.toLowerCase());
         }).toList();
-        _printPackages(packages, 'Found ${packages.length} NewGRFs matching your search');
+        _printPackages(packages, 'Found ${packages.length} ${contentType.getHumanReadable()}s matching your search');
         break;
       case 'info':
         final query = argResults!.arguments.last;
         try {
-          final package = (await getPackages()).firstWhere((package) {
-            return package.uniqueId.contains(query);
-          });
+          final package = await BaNaNaS.bananas.getPackage(contentType, query);
           print(package.asInfoString());
         } on Error catch (e) {
           print(e);
-          print('Could not find package with id $query.');
         }
         break;
       case 'self':
