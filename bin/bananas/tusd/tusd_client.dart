@@ -154,9 +154,6 @@ class TusdClient {
       });
 
     final response = await _client.head(_uploadUrl, headers: offsetHeaders);
-    if (response.statusCode != 204) {
-      throw Exception('Couldn\'t get offset from the server');
-    }
     return int.tryParse(response.headers['upload-offset'] ?? '0') ?? 0;
   }
 }
