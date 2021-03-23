@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'bananas_url.dart';
 import 'license.dart';
 import 'new_package_info.dart';
 import 'package.dart';
@@ -15,13 +16,6 @@ class BaNaNaS {
   String accessToken = '';
 
   static BaNaNaS bananas = BaNaNaS();
-
-  static const String apiBase = 'api.bananas.staging.openttd.org';
-  //static const String apiBase = 'localhost:8080';
-  //static const String apiBase = 'api.bananas.openttd.org';
-
-  //static const String tusBase = 'localhost:1080';
-  static const String tusBase = '$apiBase';
 
   BaNaNaS();
 

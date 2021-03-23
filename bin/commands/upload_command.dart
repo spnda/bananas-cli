@@ -5,6 +5,7 @@ import 'package:interact/interact.dart';
 import 'package:tint/tint.dart';
 
 import '../bananas/bananas.dart';
+import '../bananas/bananas_url.dart';
 import '../bananas/content_type.dart';
 import '../bananas/package_exception.dart';
 import '../bananas/tusd/tusd_client.dart';
@@ -32,12 +33,8 @@ class UploadCommand extends Command {
       throw UsageException('Did not specify file.', 'upload <file>');
     }
 
-    final auth = ShittyGitHubAuth('ape');
-    var token = await auth.readFromFile();
-    if (token == null) {
-      final location = await auth.authenticate();
-      token = await auth.waitForAccessToken(location);
-    }
+    final auth = GitHubAuth('ape')..init();
+    await auth.waitForAccessToken(await auth.authenticate());
 
     final uploadToken = await BaNaNaS.bananas.newPackage();
     var newPackageInfo = await BaNaNaS.bananas.getNewPackageInfo(uploadToken);
@@ -112,7 +109,7 @@ class UploadCommand extends Command {
     /// Prepare for file upload.
     final tusd = TusdClient(
       uploadToken: uploadToken,
-      uri: Uri.https(BaNaNaS.tusBase, '/new-package/tus/'), 
+      uri: Uri.https(tusBase, '/new-package/tus/'), 
       file: file, 
       headers: {
 

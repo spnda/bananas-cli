@@ -7,55 +7,10 @@ import 'package:crypto/crypto.dart';
 import 'package:tint/tint.dart';
 
 import '../bananas/bananas.dart';
-import 'access_token.dart';
-import 'device_code.dart';
+import '../bananas/bananas_url.dart';
+import 'token.dart';
 
 class GitHubAuth {
-  final String clientId;
-
-  static GitHubAccessToken? cachedAccessToken;
-
-  final bool allowSignUp = false;
-
-  GitHubAuth({this.clientId = '83d59d4be7f91c22adcd'}) {
-    final file = File('./bananas.txt');
-    if (file.existsSync()) {
-      cachedAccessToken = GitHubAccessToken.fromJson(json.decode(file.readAsStringSync()));
-    }
-  }
-
-  Future<GitHubDeviceCode> getDeviceCode() async {
-    // This will obtain a key that the user will have to enter on the GH website to authenticate.
-    final url = 'https://github.com/login/device/code?client_id=$clientId';
-    final headers = {
-      HttpHeaders.acceptHeader: 'application/json',
-    };
-    final response = json.decode((await http.post(Uri.parse(url), headers: headers)).body);
-    return GitHubDeviceCode.fromJson(response);
-  }
-
-  Future<GitHubAccessToken> getAccessToken(GitHubDeviceCode deviceCode) async {
-    final query = {
-      'client_id': clientId,
-      'device_code': deviceCode.deviceCode,
-      'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
-    };
-    final uri = Uri.https('github.com', '/login/oauth/access_token', query);
-    final response = json.decode((await http.post(uri, headers: {
-      HttpHeaders.acceptHeader: 'application/json',
-    }))
-        .body);
-    return GitHubAccessToken.fromJson(response);
-  }
-
-  void save(GitHubAccessToken token) {
-    final file = File('./bananas.txt');
-    if (!file.existsSync()) file.createSync();
-    file.writeAsStringSync(json.encode(token.toJson()));
-  }
-}
-
-class ShittyGitHubAuth {
   final Random _random = Random();
 
   String _getRandomHexString(int length) 
@@ -84,7 +39,7 @@ class ShittyGitHubAuth {
 
   final File _file = File('./bananas_shitty.txt');
 
-  ShittyGitHubAuth(this.clientId);
+  GitHubAuth(this.clientId);
 
   void init() async {
     final token = await readFromFile();
@@ -117,7 +72,7 @@ class ShittyGitHubAuth {
     var code_challenge = base64.encode(sdsad);
     code_challenge = code_challenge.replaceAll('+', '-').replaceAll('/', '_');
 
-    final authUri = Uri.https(BaNaNaS.apiBase, 'user/authorize', {
+    final authUri = Uri.https(apiBase, 'user/authorize', {
       'audience': 'github', 
       'redirect_uri': 'http://localhost:3977/redirect', 
       'response_type': 'code', 
@@ -143,7 +98,7 @@ class ShittyGitHubAuth {
     firstRequest.response.writeln('Done.');
     await firstRequest.response.close();
 
-    final accessData = await http.post(Uri.https(BaNaNaS.apiBase, '/user/token'), body: json.encode({
+    final accessData = await http.post(Uri.https(apiBase, '/user/token'), body: json.encode({
       'client_id': clientId, 
       'redirect_uri': 'http://localhost:3977/redirect', 
       'code_verifier': _codeVerifier, 
@@ -159,24 +114,5 @@ class ShittyGitHubAuth {
     if (!_file.existsSync()) _file.createSync();
     _file.writeAsStringSync(json.encode(accessToken));
     return Token.fromJson(accessToken);
-  }
-}
-
-class Token {
-  late final String accessToken;
-  late final String tokenType;
-
-  Token({required this.accessToken, required this.tokenType});
-
-  Token.fromJson(Map<String, dynamic> json) {
-    accessToken = json['access_token'];
-    tokenType = json['token_type'];
-  }
-
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    data['access_token'] = accessToken;
-    data['token_type'] = tokenType;
-    return data;
   }
 }

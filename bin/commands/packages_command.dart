@@ -64,7 +64,7 @@ class PackagesCommand extends Command {
         }
         break;
       case 'self':
-        ShittyGitHubAuth('ape').init();
+        GitHubAuth('ape').init();
         final packages = await BaNaNaS.bananas.getMyPackages();
         _printPackages(packages, 'Showing your ${packages.length} packages.');
         break;

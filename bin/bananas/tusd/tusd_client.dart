@@ -6,27 +6,37 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart';
 
+/// Simply TUSD client for uploading a single file to given [uri].
 class TusdClient {
+  /// The TUSD version we are targeting.
   static const tusVersion = '1.0.0';
 
   final String uploadToken;
 
+  /// The website we're targeting.
   final Uri uri;
 
+  /// The file we want to upload.
   final File file;
 
+  /// Headers we use for each create/upload and patch request.
   final Map<String, String> headers;
 
+  /// Metadata of the file.
   final Map<String, dynamic> metadata;
 
+  /// The maximum chunk size of bytes of [file].
   final int maxChunkSize;
 
+  /// Our http client for uploading.
   late http.Client _client;
 
   late Uri _uploadUrl;
 
+  /// The total file size in bytes.
   int _fileSize = 0;
 
+  /// Our current offset inside the file.
   int _offset = 0;
 
   int get fileSize => _fileSize;
@@ -42,6 +52,7 @@ class TusdClient {
     _uploadUrl = uri;
   }
 
+  /// Prepare for the upload.
   Future prepare() async {
     _fileSize = await file.length();
 
@@ -73,6 +84,7 @@ class TusdClient {
     _uploadUrl = Uri.parse(response.headers['location']!);
   }
 
+  /// Upload the file.
   Future upload({
     required Function(double) onProgress,
     required Function() onComplete,
@@ -116,19 +128,12 @@ class TusdClient {
     }
   }
 
-  /// Get data from file to upload
+  /// Get data from file to upload at [_offset].
   Future<Uint8List> _getFileData() async {
-    /*final start = _offset;
     var end = _offset + maxChunkSize;
     end = end > _fileSize ? _fileSize : end;
-    final fileChunk = await file.openRead(start, end).first;
-
-    final bytesRead = min(maxChunkSize, fileChunk.length);
-    _offset += bytesRead;
-    return fileChunk;*/
-    var end = _offset + maxChunkSize;
-    end = end > _fileSize ? _fileSize : end;
-    final raf = file.openSync(mode: FileMode.read)..setPositionSync(_offset);
+    final raf = file.openSync(mode: FileMode.read)
+      ..setPositionSync(_offset);
     final data = raf.readSync(end - _offset);
     _offset += min(maxChunkSize, data.lengthInBytes);
     return data;
@@ -149,11 +154,9 @@ class TusdClient {
       });
 
     final response = await _client.head(_uploadUrl, headers: offsetHeaders);
-
     if (response.statusCode != 204) {
-
+      throw Exception('Couldn\'t get offset from the server');
     }
-
     return int.tryParse(response.headers['upload-offset'] ?? '0') ?? 0;
   }
 }

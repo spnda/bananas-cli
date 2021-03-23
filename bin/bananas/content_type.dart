@@ -1,3 +1,4 @@
+/// The various content types for uploading.
 enum BananasContentType {
   ai,
   ai_library,
