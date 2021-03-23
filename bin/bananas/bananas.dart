@@ -66,6 +66,37 @@ class BaNaNaS {
     return Package.fromJson(data);
   }
 
+  /// UPDATE
+   
+  /// Update the global information of a single package.
+  Future<Package> updateGlobalPackageInfo(Package package, {DateTime? dateTime}) async {
+    var endpoint = '/package/${package.contentType.get()}/${package.uniqueId}';
+    if (dateTime != null) endpoint += '/${dateTime.toUtc().toIso8601String()}';
+    var url = Uri.https(apiBase, endpoint);
+    print(json.encode(package.toJson()));
+
+    /// Some values are not supposed to be 'updated' by this, therefore
+    /// we'll remove them.
+    var packageJson = package.toJson();
+    packageJson.remove('content-type');
+    packageJson.remove('unique-id');
+    packageJson.remove('authors');
+    packageJson.remove('versions');
+
+    var response = await http.put(url,
+      body: json.encode(packageJson),
+      headers: {
+        HttpHeaders.authorizationHeader: accessToken.asHeader(),
+      }
+    );
+    if (response.statusCode != 204) {
+      final responseJson = json.decode(response.body);
+      throw Exception('${responseJson['message']}: ${responseJson['errors']}');
+    }
+
+    return package; // Just return the same package again.
+  }
+
   /// NEW PACKAGE
    
   /// Start with the creation of a new package or version.

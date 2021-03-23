@@ -1,34 +1,46 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:tint/tint.dart';
+
+import 'content_type.dart';
 
 class Package {
   late String name;
   late String? description;
   late String? url;
-  late String contentType;
+  late final List<String> tags;
+  late BananasContentType contentType;
   late String uniqueId;
-  late List<Author>? authors;
-  late List<Version>? versions;
+  late bool archived;
+  late final List<Author> authors;
+  late final List<Version> versions;
 
-  Package({required this.name, required this.description, required this.url, required this.contentType, required this.uniqueId, required this.authors, required this.versions});
+  Package({required this.name, required this.description, required this.url, this.tags = const <String>[], required this.contentType, required this.uniqueId, required this.archived, this.authors = const <Author>[], this.versions = const <Version>[]});
 
   Package.fromJson(Map<String, dynamic> json) {
     name = json['name'];
     description = json['description'];
     url = json['url'];
-    contentType = json['content-type'];
+    contentType = BananasContentTypeExt.fromString(json['content-type']);
     uniqueId = json['unique-id'];
-    if (json['authors'] != null) {
-      authors = <Author>[];
-      json['authors'].forEach((v) {
-        authors?.add(Author.fromJson(v));
+
+    tags = <String>[];
+    if (json['tags'] != null) {
+      json['tags'].forEach((v) {
+        tags.add(v);
       });
     }
+    authors = <Author>[];
+    if (json['authors'] != null) {
+      json['authors'].forEach((v) {
+        authors.add(Author.fromJson(v));
+      });
+    }
+    versions = <Version>[];
     if (json['versions'] != null) {
-      versions = <Version>[];
       json['versions'].forEach((v) {
-        versions?.add(Version.fromJson(v));
+        versions.add(Version.fromJson(v));
       });
     }
   }
@@ -38,20 +50,23 @@ class Package {
     data['name'] = name;
     data['description'] = description;
     data['url'] = url;
-    data['content-type'] = contentType;
+    data['content-type'] = contentType.get();
     data['unique-id'] = uniqueId;
-    if (authors != null) {
-      data['authors'] = authors?.map((v) => v.toJson()).toList();
+    if (tags.isNotEmpty) {
+      data['tags'] = tags;
     }
-    if (versions != null) {
-      data['versions'] = versions?.map((v) => v.toJson()).toList();
+    if (authors.isNotEmpty) {
+      data['authors'] = authors.map((v) => v.toJson()).toList();
+    }
+    if (versions.isNotEmpty) {
+      data['versions'] = versions.map((v) => v.toJson()).toList();
     }
     return data;
   }
 
   String get latestVersion {
-    if (versions == null) return '';
-    return versions!.first.version;
+    if (versions.isEmpty) return '';
+    return versions.first.version;
   }
 
   String asInfoString({bool coloured = true}) {
@@ -72,15 +87,15 @@ class Package {
     write('ID', uniqueId);
 
     // Authors & Versions
-    if (authors != null) {
+    if (authors.isNotEmpty) {
       buffer.writeln('Authors'.gray() + ':');
-      for (var author in authors!) {
+      for (var author in authors) {
         buffer.writeln('  - ${author.displayName}');
       }
     }
-    if (versions != null) {
+    if (versions.isNotEmpty) {
       buffer.writeln('Versions'.gray() + ':');
-      for (var version in versions!) {
+      for (var version in versions) {
         buffer.writeln('  - ${version.version} (${DateTime.parse(version.uploadDate).toString()})');
       }
     }

@@ -12,6 +12,7 @@ import '../bananas/package.dart';
 import '../bananas/package_exception.dart';
 import '../bananas/tusd/tusd_client.dart';
 import '../github/github_auth.dart';
+import '../utilities/inputVerifiers.dart';
 import '../utilities/md5sum.dart';
 
 class ManageCommand extends Command {
@@ -34,21 +35,90 @@ class ManageCommand extends Command {
 
     myPackages.addAll(await BaNaNaS.bananas.getMyPackages());
 
-    final optionText = ['Update package', 'Upload new package', 'Delete package'];
-    final options = ['update', 'new', 'delete'];
+    final optionText = ['Upload new package', 'Edit a package'];
+    final options = ['new', 'edit'];
     final chosenOption = Select(
       prompt: 'What do you want to do?', 
       options: optionText
     ).interact();
 
     switch (options[chosenOption]) {
-      case 'update':
+      case 'edit':
+        await editPackage();
+        break;
       case 'new':
         await uploadNew();
         break;
-      case 'delete':
       default:
         throw Exception('Unknown option.');
+    }
+  }
+
+  Future<void> editPackage() async {
+    final chosenPackage = Select(
+      prompt: 'Which package do you want to edit?',
+      options: myPackages.map((p) => '${p.name} ' + '(${p.uniqueId})'.gray()).toList().cast<String>(),
+    ).interact();
+    final package = myPackages[chosenPackage];
+    
+    /// Allow the user to change any values of the [package] object.
+    var exit = false;
+    while(!exit) {
+      const fields = ['name', 'description', 'url', 'tags', 'Done, save'];
+      final chosenFieldToEdit = Select(
+        prompt: 'Which value do you want to edit?',
+        options: fields,
+      ).interact();
+      
+      /// If they selected 'Done, save', we'll exit this loop and send the new data to the API.
+      if (chosenFieldToEdit == fields.length - 1) {
+        exit = true;
+        break;
+      }
+
+      switch (fields[chosenFieldToEdit]) {
+        case 'name':
+          var newName = Input(
+            prompt: 'Enter a new name:',
+            validator: emptyStringValidator,
+          ).interact();
+          package.name = newName;
+          break;
+        case 'description':
+          var newDescription = Input(
+            prompt: 'Enter a new description:',
+            validator: emptyStringValidator,
+          ).interact();
+          package.description = newDescription.replaceAll('\\n', '\n');
+          break;
+        case 'url':
+          var newUrl = Input(
+            prompt: 'Enter a new URL:',
+            validator: urlStringValidator,
+          ).interact();
+          package.url = newUrl;
+          break;
+        case 'tags':
+          var newTags = Input(
+            prompt: 'Add new tags: ' + '(Comma seperated!)'.gray(),
+            validator: stringListValidator,
+          ).interact();
+          package.tags.clear();
+          package.tags.addAll(newTags.split(',').map((s) => s.trim()).toList());
+          break;
+      }
+    }
+
+    final confirmed = Confirm(
+      prompt: 'Are you sure you want to save this new information? ' + '(Note: Old information will be overriden and lost)'.gray(),
+      defaultValue: true,
+      waitForNewLine: true,
+    ).interact();
+    if (confirmed) {
+      await BaNaNaS.bananas.updateGlobalPackageInfo(package);
+      print('✔'.padRight(2).green() + 'Successfully updated new info.'.bold());
+    } else {
+      return;
     }
   }
 
@@ -68,7 +138,7 @@ class ManageCommand extends Command {
       /// This might not work, as for example with NewGRFs, the md5sum on the server
       /// ignores the sprites. Therefore, md5sums might vary but we'll still check for 
       /// them anyway *just in case*.
-      if (package.versions?.first.md5sumPartial == md5sum.substring(md5sum.length - 9)) {
+      if (package.versions.first.md5sumPartial == md5sum.substring(md5sum.length - 9)) {
         final resume = Confirm(
           prompt: 'You have already uploaded this file before. Are you sure you want to continue?',
           defaultValue: false,
@@ -80,14 +150,6 @@ class ManageCommand extends Command {
 
     final uploadToken = await BaNaNaS.bananas.newPackage();
     var newPackageInfo = await BaNaNaS.bananas.getNewPackageInfo(uploadToken);
-
-    bool emptyStringValidator(String value) {
-      if (value.isEmpty) {
-        throw ValidationError('This field cannot be empty.');
-      } else {
-        return true;
-      }
-    }
 
     /// Get the content type.
     if (newPackageInfo.contentType == null) {
@@ -141,16 +203,7 @@ class ManageCommand extends Command {
     if (newPackageInfo.url == null) {
       final url = Input(
         prompt: 'What is the URL of the package?',
-        validator: (String value) {
-          /// We'll use a regex string to validate if this is infact a URL.
-          /// See https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
-          final regex = RegExp(r'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)', caseSensitive: false);
-          if (regex.hasMatch(value)) {
-            return true;
-          } else {
-            throw ValidationError('This has to be a valid URL.');
-          }
-        },
+        validator: urlStringValidator,
       ).interact();
       if (url.isNotEmpty) newPackageInfo.url ??= url;
     }
