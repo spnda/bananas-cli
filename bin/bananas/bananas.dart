@@ -73,7 +73,6 @@ class BaNaNaS {
     var endpoint = '/package/${package.contentType.get()}/${package.uniqueId}';
     if (dateTime != null) endpoint += '/${dateTime.toUtc().toIso8601String()}';
     var url = Uri.https(apiBase, endpoint);
-    print(json.encode(package.toJson()));
 
     /// Some values are not supposed to be 'updated' by this, therefore
     /// we'll remove them.
@@ -135,7 +134,7 @@ class BaNaNaS {
     if (response.statusCode == 204) return true;
     var jsonResponse = json.decode(response.body);
     if (jsonResponse['message'] != null) {
-      throw Exception(jsonResponse['message']);
+      throw Exception('${jsonResponse['message']}: ${jsonResponse['errors']}');
     }
     return false;
   }

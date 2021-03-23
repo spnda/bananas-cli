@@ -35,8 +35,8 @@ class ManageCommand extends Command {
 
     myPackages.addAll(await BaNaNaS.bananas.getMyPackages());
 
-    final optionText = ['Upload new package', 'Edit a package'];
-    final options = ['new', 'edit'];
+    final optionText = ['Upload new package', 'Update a package', 'Edit a package'];
+    final options = ['new', 'update', 'edit'];
     final chosenOption = Select(
       prompt: 'What do you want to do?', 
       options: optionText
@@ -49,17 +49,36 @@ class ManageCommand extends Command {
       case 'new':
         await uploadNew();
         break;
+      case 'update':
+        await updatePackage();
+        break;
       default:
         throw Exception('Unknown option.');
     }
   }
 
-  Future<void> editPackage() async {
+  Package _askWhichPackage() {
     final chosenPackage = Select(
       prompt: 'Which package do you want to edit?',
       options: myPackages.map((p) => '${p.name} ' + '(${p.uniqueId})'.gray()).toList().cast<String>(),
     ).interact();
-    final package = myPackages[chosenPackage];
+    return myPackages[chosenPackage];
+  }
+
+  Future<File> _showFilePrompt() async {
+    /// Give the user a list of all files in the current directory to choose from.
+    /// This might be subject to change, so that we have a more dynamic system.
+    final filesInDirectory = Directory.current.listSync();
+    final chosenFile = Select(
+      prompt: 'Which file do you want to upload?',
+      options: filesInDirectory.map((f) => basename(f.path)).toList(),
+    ).interact();
+    return File(filesInDirectory[chosenFile].path);
+  }
+
+  /// Edit a package interactively. Can only edit global package information, not version information.
+  Future<void> editPackage() async {
+    final package = _askWhichPackage();
     
     /// Allow the user to change any values of the [package] object.
     var exit = false;
@@ -124,14 +143,7 @@ class ManageCommand extends Command {
 
   /// Method to upload a new package, and a new package only.
   Future<void> uploadNew() async {
-    /// Give the user a list of all files in the current directory to choose from.
-    /// This might be subject to change, so that we have a more dynamic system.
-    final filesInDirectory = Directory.current.listSync();
-    final chosenFile = Select(
-      prompt: 'Which file do you want to upload?',
-      options: filesInDirectory.map((f) => basename(f.path)).toList(),
-    ).interact();
-    final file = File(filesInDirectory[chosenFile].path);
+    final file = await _showFilePrompt();
 
     final md5sum = await getMd5sumOfFile(file);
     for (final package in myPackages) {
@@ -249,6 +261,73 @@ class ManageCommand extends Command {
         print(error);
       }
       print(('✘'.padRight(2) + 'Publishing failed!'.bold()).red());
+    }
+  }
+
+  Future<void> updatePackage() async {
+    final package = _askWhichPackage();
+
+    /// Get the file upload token & info.
+    final uploadToken = await BaNaNaS.bananas.newPackage();
+    var newPackageInfo = await BaNaNaS.bananas.getNewPackageInfo(uploadToken);
+    /// Copy values over so that it notices the 'update' of a existing package.
+    newPackageInfo.name = package.name;
+    // newPackageInfo.uniqueId = package.uniqueId;
+    newPackageInfo.description = package.description;
+    
+    /// Get the version
+    if (newPackageInfo.version == null) {
+      final version = Input(
+        prompt: 'What version are you updating to?',
+        validator: emptyStringValidator,
+      ).interact();
+      newPackageInfo.version ??= version;
+    }
+
+    /// Get the license
+    if (newPackageInfo.license == null) {
+      final licenses = await BaNaNaS.bananas.getLicenses();
+      final licenseIndex = Select(
+        prompt: 'Which license?',
+        options: licenses.map((l) => l.name).toList(),
+      ).interact();
+      newPackageInfo.license ??= licenses[licenseIndex].name;
+    }
+
+    /// Update the package info for our upload.
+    await BaNaNaS.bananas.updatePackageInfo(uploadToken, newPackageInfo);
+
+    /// Get the file and the tusd client.
+    final file = await _showFilePrompt();
+    final tusd = TusdClient(
+      uploadToken: uploadToken,
+      uri: Uri.https(tusBase, '/new-package/tus/'),
+      file: file,
+      headers: {},
+    );
+    await tusd.prepare();
+    await tusd.upload(onProgress: (progress) {}, onComplete: () {});
+
+    /// Get the updated package info after uploading the file
+    /// This also includes the md5sum-partial and unique-id, allowing
+    /// us to check if this GRF has been uploaded elsewhere.
+    /// This command is purely for update purposes, so that if we do find
+    /// that the GRFID is different to the one selected before, we error.
+    var updatedPackageInfo = await BaNaNaS.bananas.getNewPackageInfo(uploadToken);
+    if (updatedPackageInfo.uniqueId != package.uniqueId) {
+      print(('✘'.padRight(2) + 'The selected GRF file does not have the same GRFID as the previous versions of the package. We do not allow uploading GRFs with different GRFIDs as the same package.'.bold()).red());
+      return;
+    }
+
+    try {
+      await BaNaNaS.bananas.publishNewPackage(uploadToken);
+      print('✔'.padRight(2).green() + 'Published successfully!'.bold());
+    } on PackageException catch (e) {
+      for (final error in e.errors) {
+        print(('✘'.padRight(2) + error.bold()).red());
+      }
+      print(('✘'.padRight(2) + 'Publishing failed!'.bold()).red());
+      exit(0); /// Force close the program, it sometimes hangs on close.
     }
   }
 }
