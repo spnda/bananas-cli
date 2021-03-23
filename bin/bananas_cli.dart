@@ -12,7 +12,6 @@ void main(List<String> args) async {
     ..addCommand(LoginCommand())
     ..addCommand(PackagesCommand());
   await runner.run(args).catchError((error) {
-    if (error is! UsageException) throw error;
     print(error);
     exit(64);
   });

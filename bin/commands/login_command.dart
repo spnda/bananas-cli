@@ -16,23 +16,28 @@ class LoginCommand extends Command {
   @override
   void run() async {
     var auth = GitHubAuth('ape');
-    var token = await auth.readFromFile();
+    final token = await auth.readFromFile();
     if (token != null) {
-      /// If we already have credentials saved, ask the user if we really want to 
-      /// get new credentials.
-      final answer = Confirm(
-        prompt: 'Are you sure you want to re-authenticate?',
-        defaultValue: false,
-        waitForNewLine: true,
-      ).interact();
-      if (!answer) return;
+      final valid = await auth.validate(token.accessToken);
+      if (valid) {
+        /// The saved credentials are valid, ask the user if we really want to 
+        /// get new credentials.
+        final answer = Confirm(
+          prompt: 'Are you sure you want to re-authenticate?',
+          defaultValue: false,
+          waitForNewLine: true,
+        ).interact();
+        if (!answer) return;
+      } else {
+        print('!'.padRight(2).yellow() + 'The saved credentials are not valid.');
+      }
     }
 
     final location = await auth.authenticate();
-    print('!'.yellow() + ' Please open the following URL to authenticate: ' + location);
+    print('!'.padRight(2).yellow() + 'Please open the following URL to authenticate: ' + location);
 
-    token = await auth.waitForAccessToken(location);
-    print('✓'.green() + ' Successfully authenticated.'.bold());
+    await auth.waitForAccessToken(location);
+    print('✔'.padRight(2).green() + 'Successfully authenticated.'.bold());
 
     // As the program locks up here, we're going to forcefully exit it.
     exit(0);

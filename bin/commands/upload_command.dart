@@ -33,8 +33,12 @@ class UploadCommand extends Command {
       throw UsageException('Did not specify file.', 'upload <file>');
     }
 
-    final auth = GitHubAuth('ape')..init();
-    await auth.waitForAccessToken(await auth.authenticate());
+    final auth = GitHubAuth('ape');
+    try {
+      await auth.init();
+    } on Exception {
+      return;
+    }
 
     final uploadToken = await BaNaNaS.bananas.newPackage();
     var newPackageInfo = await BaNaNaS.bananas.getNewPackageInfo(uploadToken);
@@ -89,7 +93,10 @@ class UploadCommand extends Command {
       final url = Input(
         prompt: 'What is the URL of the package?',
         validator: (String value) {
-          return Uri.tryParse(value) != null;
+          /// We'll use a regex string to validate if this is infact a URL.
+          /// See https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
+          final regex = RegExp(r'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)', caseSensitive: false);
+          return regex.hasMatch(value);
         },
       ).interact();
       if (url.isNotEmpty) newPackageInfo.url ??= url;

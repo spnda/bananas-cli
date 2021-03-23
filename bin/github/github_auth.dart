@@ -41,12 +41,29 @@ class GitHubAuth {
 
   GitHubAuth(this.clientId);
 
-  void init() async {
-    final token = await readFromFile();
-    if (token == null) {
-      print('!'.red() + ' Please run bananas login first.');
-      throw Exception('Please run bananas login first.');
+  Future<Token> init() async {
+    try {
+      final token = await readFromFile();
+      if (token == null) {
+        throw Exception('No auth token could be read.');
+      } else {
+        if (!(await validate(token.accessToken))) {
+          throw Exception('Invalid auth token.');
+        }
+        return token;
+      }
+    } on Exception {
+      print('!'.padRight(2).red() + 'Unauthenticated: Please login first.');
+      rethrow;
     }
+  }
+
+  Future<bool> validate(String token) async {
+    final uri = Uri.https(apiBase, 'user');
+    final request = await http.get(uri, headers: {
+      HttpHeaders.authorizationHeader: 'Bearer $token',
+    });
+    return request.statusCode == 200;
   }
 
   Future<Token?> readFromFile() async {
