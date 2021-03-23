@@ -5,9 +5,11 @@ import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import 'package:tint/tint.dart';
+import 'package:path/path.dart' as path;
 
 import '../bananas/bananas.dart';
 import '../bananas/bananas_url.dart';
+import '../utilities/home_directory.dart';
 import 'token.dart';
 
 class GitHubAuth {
@@ -37,7 +39,7 @@ class GitHubAuth {
 
   String _codeVerifier = '';
 
-  final File _file = File('./bananas_shitty.txt');
+  final File _file = File(path.join(getApplicationDataDirectory(), 'bananas-cli', 'token'));
 
   GitHubAuth(this.clientId);
 
@@ -68,14 +70,21 @@ class GitHubAuth {
 
   Future<Token?> readFromFile() async {
     if (_file.existsSync()) {
-      final data = json.decode(_file.readAsStringSync()) ?? {};
-      if (data == {}) return null;
-      final token = Token.fromJson(data);
+      final data = _file.readAsStringSync();
+      if (data.isEmpty) return null;
+      final token = Token(accessToken: data, tokenType: 'Bearer');
       BaNaNaS.bananas.accessToken = token.accessToken;
       return token;
     } else {
       return null;
     }
+  }
+
+  Future<void> writeToFile(Token token) async {
+    final dir = Directory(path.dirname(_file.path));
+    if (!dir.existsSync()) dir.createSync();
+    if (!_file.existsSync()) _file.createSync();
+    _file.writeAsStringSync(token.accessToken);
   }
 
   // The BaNaNaS API handles GH Authentication for us,
@@ -126,10 +135,9 @@ class GitHubAuth {
     if (accessData.statusCode != 200) {
       throw Exception('Couldn\'t get access token.');
     }
-    final accessToken = json.decode(accessData.body);
-    BaNaNaS.bananas.accessToken = accessToken['access_token'];
-    if (!_file.existsSync()) _file.createSync();
-    _file.writeAsStringSync(json.encode(accessToken));
-    return Token.fromJson(accessToken);
+    final token = Token.fromJson(json.decode(accessData.body));
+    BaNaNaS.bananas.accessToken = token.accessToken;
+    await writeToFile(token);
+    return token;
   }
 }
