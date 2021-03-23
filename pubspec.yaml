@@ -9,7 +9,7 @@ environment:
 dependencies:
   args: ^2.0.0
   crypto: ^3.0.0
-  http: ^0.13.0
+  http: ^0.13.1
   open_url: ^2.0.0
   path: ^1.7.0
   tint: ^2.0.0
