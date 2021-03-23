@@ -93,7 +93,7 @@ class ManageCommand extends Command {
     if (newPackageInfo.contentType == null) {
       final contentTypeIndex = Select(
         prompt: 'What content type is this package?',
-        options: BananasContentType.values.map((t) => t.getHumanReadable()).toList(),
+        options: BananasContentType.values.map((t) => t.getHumanReadable()).where((t) => t.isNotEmpty).toList(),
         initialIndex: 0,
       ).interact();
       final contentType = BananasContentType.values[contentTypeIndex];
