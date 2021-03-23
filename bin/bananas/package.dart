@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:math';
 
 import 'package:tint/tint.dart';
@@ -48,8 +47,8 @@ class Package {
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     data['name'] = name;
-    data['description'] = description;
-    data['url'] = url;
+    if (description != null) data['description'] = description;
+    if (url != null) data['url'] = url;
     data['content-type'] = contentType.get();
     data['unique-id'] = uniqueId;
     if (tags.isNotEmpty) {

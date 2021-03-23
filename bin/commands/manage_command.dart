@@ -123,7 +123,8 @@ class ManageCommand extends Command {
             validator: stringListValidator,
           ).interact();
           package.tags.clear();
-          package.tags.addAll(newTags.split(',').map((s) => s.trim()).toList());
+          /// Trim all tags and filter empty tags.
+          package.tags.addAll(newTags.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList());
           break;
       }
     }
