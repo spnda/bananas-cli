@@ -8,6 +8,7 @@ import 'package:path/path.dart';
 import '../bananas/bananas.dart';
 import '../bananas/bananas_url.dart';
 import '../bananas/content_type.dart';
+import '../bananas/new_package_info.dart';
 import '../bananas/package.dart';
 import '../bananas/package_exception.dart';
 import '../bananas/tusd/tusd_client.dart';
@@ -71,9 +72,27 @@ class ManageCommand extends Command {
     final filesInDirectory = Directory.current.listSync();
     final chosenFile = Select(
       prompt: 'Which file do you want to upload?',
-      options: filesInDirectory.map((f) => basename(f.path)).toList(),
+      options: filesInDirectory.whereType<File>().map((f) => basename(f.path)).toList(),
     ).interact();
     return File(filesInDirectory[chosenFile].path);
+  }
+
+  bool confirmUpload(NewPackageInfo newPackageInfo) {
+    // Confirm this package.
+    final uploadConfirmed = Confirm(
+      prompt: 'Are you sure you want to publish ${newPackageInfo.name}, ${newPackageInfo.version}? ' + '(Note: Publishing is forever!)'.gray(),
+      defaultValue: true,
+      waitForNewLine: true,
+    ).interact();
+
+    final tosConfirmed = Confirm(
+      prompt: 'I confirm that I am one of the authors, and I have read and understood the terms of service (https://bananas.openttd.org/manager/tos/):',
+      defaultValue: true,
+      waitForNewLine: true
+    ).interact();
+
+    if (!uploadConfirmed || !tosConfirmed) return false;
+    return true;
   }
 
   /// Edit a package interactively. Can only edit global package information, not version information.
@@ -221,14 +240,8 @@ class ManageCommand extends Command {
       if (url.isNotEmpty) newPackageInfo.url ??= url;
     }
 
-    // Confirm this package.
-    final uploadConfirmed = Confirm(
-      prompt: 'Are you sure you want to publish ${newPackageInfo.name}, ${newPackageInfo.version}? ' + '(Note: Publishing is forever!)'.gray(),
-      defaultValue: true,
-      waitForNewLine: true,
-    ).interact();
-
-    if (!uploadConfirmed) return;
+    // Confirm the upload package.
+    if (!confirmUpload(newPackageInfo)) return;
 
     await BaNaNaS.bananas.updatePackageInfo(uploadToken, newPackageInfo);
 
@@ -294,6 +307,9 @@ class ManageCommand extends Command {
       ).interact();
       newPackageInfo.license ??= licenses[licenseIndex].name;
     }
+
+    // Confirm the upload package.
+    if (!confirmUpload(newPackageInfo)) return;
 
     /// Update the package info for our upload.
     await BaNaNaS.bananas.updatePackageInfo(uploadToken, newPackageInfo);
