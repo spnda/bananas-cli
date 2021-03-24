@@ -18,23 +18,6 @@ class GitHubAuth {
   String _getRandomHexString(int length) 
     => List.generate(length, (_) => _random.nextInt(255).toRadixString(16).padLeft(2, '0')).fold<String>('', (prev, element) => prev + element);
 
-  Future<ProcessResult> openUrl(String url) {
-    return Process.run(_command, [url], runInShell: true);
-  }
-
-  String get _command {
-    if (Platform.isWindows) {
-      return 'start';
-    } else if (Platform.isLinux) {
-      return 'xdg-open';
-    } else if (Platform.isMacOS) {
-      return 'open';
-    } else {
-      throw UnsupportedError('Operating system not supported by the open_url '
-          'package: ${Platform.operatingSystem}');
-    }
-  }
-
   final String clientId;
 
   String _codeVerifier = '';
