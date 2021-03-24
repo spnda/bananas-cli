@@ -118,6 +118,7 @@ class ManageCommand extends Command {
         case 'name':
           var newName = Input(
             prompt: 'Enter a new name:',
+            defaultValue: package.name,
             validator: emptyStringValidator,
           ).interact();
           package.name = newName;
@@ -125,6 +126,7 @@ class ManageCommand extends Command {
         case 'description':
           var newDescription = Input(
             prompt: 'Enter a new description:',
+            defaultValue: package.description,
             validator: emptyStringValidator,
           ).interact();
           package.description = newDescription.replaceAll('\\n', '\n');
@@ -132,6 +134,7 @@ class ManageCommand extends Command {
         case 'url':
           var newUrl = Input(
             prompt: 'Enter a new URL:',
+            defaultValue: package.url,
             validator: urlStringValidator,
           ).interact();
           package.url = newUrl;
@@ -139,6 +142,12 @@ class ManageCommand extends Command {
         case 'tags':
           var newTags = Input(
             prompt: 'Add new tags: ' + '(Comma seperated!)'.gray(),
+            defaultValue: package.tags.fold('', (prev, element) {
+              if (prev == null || prev.isEmpty) {
+                return element;
+              }
+              return '$prev, $element';
+            }),
             validator: stringListValidator,
           ).interact();
           package.tags.clear();
