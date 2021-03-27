@@ -13,7 +13,7 @@ import '../bananas/package.dart';
 import '../bananas/package_exception.dart';
 import '../bananas/tusd/tusd_client.dart';
 import '../github/github_auth.dart';
-import '../utilities/inputVerifiers.dart';
+import '../utilities/input_verifiers.dart';
 import '../utilities/md5sum.dart';
 
 class ManageCommand extends Command {
