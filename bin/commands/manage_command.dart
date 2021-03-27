@@ -102,16 +102,19 @@ class ManageCommand extends Command {
     /// Allow the user to change any values of the [package] object.
     var exit = false;
     while(!exit) {
-      const fields = ['name', 'description', 'url', 'tags', 'Done, save'];
+      const fields = ['name', 'description', 'url', 'tags', 'Done, save', 'Cancel'];
       final chosenFieldToEdit = Select(
         prompt: 'Which value do you want to edit?',
         options: fields,
       ).interact();
       
-      /// If they selected 'Done, save', we'll exit this loop and send the new data to the API.
-      if (chosenFieldToEdit == fields.length - 1) {
+      if (chosenFieldToEdit == fields.indexOf('Done, save')) {
+        /// If they selected 'Done, save', we'll exit this loop and send the new data to the API.
         exit = true;
         break;
+      } else if (chosenFieldToEdit == fields.indexOf('Cancel')) {
+        /// If they selected 'Cancel', we'll simply return this function and discard any data.
+        return;
       }
 
       switch (fields[chosenFieldToEdit]) {
